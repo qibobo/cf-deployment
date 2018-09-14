@@ -28,6 +28,8 @@
     jobs:
     - name: postgres
       release: postgres
+      provides:
+        relevant_later: {as: autoscaler_database}
       properties:
         databases: &autoscaler_database
           databases:
