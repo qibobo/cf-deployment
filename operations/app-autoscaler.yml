@@ -29,7 +29,7 @@
     - name: postgres
       release: postgres
       properties:
-        databases: &database
+        databases: &autoscaler_database
           databases:
           - name: autoscaler
             tag: default
@@ -63,9 +63,9 @@
       release: app-autoscaler
       properties:
         autoscaler:
-          scalingengine_db: *database
-          scheduler_db: *database
-          policy_db: *database
+          scalingengine_db: *autoscaler_database
+          scheduler_db: *autoscaler_database
+          policy_db: *autoscaler_database
           scalingengine_db_connection_config: *databaseConnectionConfig
           scheduler_db_connection_config: *databaseConnectionConfig
           policy_db_connection_config: *databaseConnectionConfig
@@ -108,19 +108,19 @@
               client_cert: ((scalingengine_client.certificate))
               client_key: ((scalingengine_client.private_key))
             require_consul: false
-          scheduler_db: *database
-          policy_db: *database
+          scheduler_db: *autoscaler_database
+          policy_db: *autoscaler_database
     - name: operator
       release: app-autoscaler
       properties:
         autoscaler:
-          appmetrics_db: *database
-          instancemetrics_db: *database
-          scalingengine_db: *database
+          appmetrics_db: *autoscaler_database
+          instancemetrics_db: *autoscaler_database
+          scalingengine_db: *autoscaler_database
           appmetrics_db_connection_config: *databaseConnectionConfig
           instancemetrics_db_connection_config: *databaseConnectionConfig
           scalingengine_db_connection_config: *databaseConnectionConfig
-          lock_db: *database
+          lock_db: *autoscaler_database
           operator:
             scaling_engine:
               port: *scalingEnginePort
@@ -191,7 +191,7 @@
               client_cert: ((servicebroker_client.certificate))
               client_key: ((servicebroker_client.private_key))
             require_consul: false
-          policy_db: *database
+          policy_db: *autoscaler_database
           cf:
             api: "https://api.((system_domain))"
             skip_ssl_validation: "((skip_ssl_validation))"
@@ -228,7 +228,7 @@
               client_cert: ((apiserver_client.certificate))
               client_key: ((apiserver_client.private_key))
             require_consul: false
-          binding_db: *database
+          binding_db: *autoscaler_database
     - name: route_registrar
       release: routing
       consumes:
@@ -270,8 +270,8 @@
       release: app-autoscaler
       properties:
         autoscaler:
-          instancemetrics_db: *database
-          policy_db: *database
+          instancemetrics_db: *autoscaler_database
+          policy_db: *autoscaler_database
           instancemetrics_db_connection_config: *databaseConnectionConfig
           policy_db_connection_config: *databaseConnectionConfig
           cf: *cf_credentials
@@ -292,8 +292,8 @@
       release: app-autoscaler
       properties:
         autoscaler:
-          appmetrics_db: *database
-          policy_db: *database
+          appmetrics_db: *autoscaler_database
+          policy_db: *autoscaler_database
           appmetrics_db_connection_config: *databaseConnectionConfig
           policy_db_connection_config: *databaseConnectionConfig
           eventgenerator:
