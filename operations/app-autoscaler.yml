@@ -29,7 +29,7 @@
     - name: postgres
       release: postgres
       provides:
-        postgres: {as: autoscaler_database}
+        postgres: {as: autoscaler_database, type: autoscaler_database}
       properties:
         databases: &autoscaler_database
           databases:
