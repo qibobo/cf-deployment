@@ -4,6 +4,13 @@
   value:
     name: app-autoscaler
     version: latest
+- type: replace
+  path: /releases/-
+  value:
+    name: postgres
+    url: https://bosh.io/d/github.com/cloudfoundry/postgres-release?v=17
+    version: '17'
+    sha1: b062e32a5409ccd4e4161337c48705c793a58412
 #add app-autoscaler instance group
 - type: replace
   path: /instance_groups/-
