@@ -330,27 +330,27 @@
   value: 
     - citext: true
       name: autoscaler_db
-      tag: autoscaler_db
+      tag: default
 - type: replace
   path: /instance_groups/name=database/jobs/name=postgres/properties/databases/roles/-
   value: 
     - name: autoscaler_db
       password: ((autoscaler_database_password))
-      tag: autoscaler_db
+      tag: default
 
 - type: replace
   path: /instance_groups/name=asapi/jobs/name=apiserver/properties/autoscaler/policy_db
   value: &external_database
     databases:
     - name: autoscaler_db
-      tag: autoscaler_db
+      tag: default
     address: sql-db.service.cf.internal
     db_scheme: postgres
     port: 5524
     roles:
     - name: postgres
       password: ((autoscaler_database_password))
-      tag: autoscaler_db 
+      tag: default 
     connection_config: &databaseConnectionConfig
       max_open_connections: 100
       max_idle_connections: 10
