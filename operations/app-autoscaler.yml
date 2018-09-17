@@ -352,7 +352,7 @@
 - type: replace
   path: /instance_groups/name=database/jobs/name=postgres/properties/databases/roles/-
   value: 
-    name: autoscaler_db
+    name: postgres
     password: ((autoscaler_database_password))
     tag: default
 
