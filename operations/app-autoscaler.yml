@@ -332,15 +332,15 @@
 - type: replace
   path: /instance_groups/name=database/jobs/name=postgres/properties/databases/databases/-
   value: 
-    - citext: true
-      name: autoscaler_db
-      tag: default
+    citext: true
+    name: autoscaler_db
+    tag: default
 - type: replace
   path: /instance_groups/name=database/jobs/name=postgres/properties/databases/roles/-
   value: 
-    - name: autoscaler_db
-      password: ((autoscaler_database_password))
-      tag: default
+    name: autoscaler_db
+    password: ((autoscaler_database_password))
+    tag: default
 
 - type: replace
   path: /instance_groups/name=asapi/jobs/name=apiserver/properties/autoscaler/policy_db
