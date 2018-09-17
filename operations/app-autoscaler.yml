@@ -13,38 +13,54 @@
     sha1: b062e32a5409ccd4e4161337c48705c793a58412
 #add app-autoscaler instance group
 - type: replace
-  path: /instance_groups/-
+  path: /instance_groups/name=database/jobs/name=postgres/properties/databases/databases/-
   value:
-    name: postgres_autoscaler
-    azs:
-    - z1
-    instances: 1
-    update:
-      serial: true
-    stemcell: default
-    vm_type: small
-    networks:
-    - name: default
-    jobs:
-    - name: postgres
-      release: postgres
-      provides:
-        postgres: {as: autoscaler_database, type: autoscaler_database}
-      properties:
-        databases: &autoscaler_database
-          databases:
-          - name: autoscaler
-            tag: default
-          db_scheme: postgres
-          port: 5432
-          roles:
-          - name: postgres
-            password: "((database_password))"
-            tag: default
-          connection_config: &databaseConnectionConfig
-            max_open_connections: 100
-            max_idle_connections: 10
-            connection_max_lifetime: 60s
+    name: autoscaler
+    tag: default
+- type: replace
+  path: /instance_groups/name=database/jobs/name=postgres/properties/databases/roles/-
+  value:
+    name: postgres
+    password: "((database_password))"
+    tag: default
+# - type: replace
+#   path: /instance_groups/name=database/jobs/name=postgres/properties/databases/connection_config?
+#   value:
+#     max_open_connections: 100
+#     max_idle_connections: 10
+#     connection_max_lifetime: 60s
+
+# - type: replace
+#   path: /instance_groups/-
+#   value:
+#     name: postgres_autoscaler
+#     azs:
+#     - z1
+#     instances: 1
+#     update:
+#       serial: true
+#     stemcell: default
+#     vm_type: small
+#     networks:
+#     - name: default
+#     jobs:
+#     - name: postgres
+#       release: postgres
+#       properties:
+#         databases: &autoscaler_database
+#           databases:
+#           - name: autoscaler
+#             tag: default
+#           db_scheme: postgres
+#           port: 5432
+#           roles:
+#           - name: postgres
+#             password: "((database_password))"
+#             tag: default
+#           connection_config: &databaseConnectionConfig
+#             max_open_connections: 100
+#             max_idle_connections: 10
+#             connection_max_lifetime: 60s
 # asactors Instance Group: scalingengine&scheduler&operator
 - type: replace
   path: /instance_groups/-
@@ -68,7 +84,11 @@
           scalingengine_db: *autoscaler_database
           scheduler_db: *autoscaler_database
           policy_db: *autoscaler_database
-          scalingengine_db_connection_config: *databaseConnectionConfig
+          # scalingengine_db_connection_config: *databaseConnectionConfig
+          scalingengine_db_connection_config:
+            max_open_connections: 100
+            max_idle_connections: 10
+            connection_max_lifetime: 60s
           scheduler_db_connection_config: *databaseConnectionConfig
           policy_db_connection_config: *databaseConnectionConfig
           cf: &cf_credentials
