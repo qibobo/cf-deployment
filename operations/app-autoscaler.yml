@@ -23,38 +23,15 @@
 #     name: postgres
 #     password: "((database_password))"
 #     tag: default
+# - type: replace
+#   path: /instance_groups/name=database/jobs/name=postgres/properties/databases/roles/-
+#   value:
+#     name: postgres
+#     password: "((database_password))"
+#     tag: default
 
-- type: replace
-  path: /instance_groups/-
-  value:
-    name: postgres_autoscaler
-    azs:
-    - z1
-    instances: 1
-    update:
-      serial: true
-    stemcell: default
-    vm_type: small
-    networks:
-    - name: default
-    jobs:
-    - name: postgres
-      release: postgres
-      properties:
-        databases: &autoscaler_database
-          databases:
-          - name: autoscaler
-            tag: default
-          db_scheme: postgres
-          port: 5432
-          roles:
-          - name: postgres
-            password: "((database_password))"
-            tag: default
-          connection_config: &databaseConnectionConfig
-            max_open_connections: 100
-            max_idle_connections: 10
-            connection_max_lifetime: 60s
+
+
 # asactors Instance Group: scalingengine&scheduler&operator
 - type: replace
   path: /instance_groups/-
@@ -78,7 +55,11 @@
           scalingengine_db: *autoscaler_database
           scheduler_db: *autoscaler_database
           policy_db: *autoscaler_database
+          # scalingengine_db_connection_config: *databaseConnectionConfig
           scalingengine_db_connection_config: *databaseConnectionConfig
+            max_open_connections: 100
+            max_idle_connections: 10
+            connection_max_lifetime: 60s
           scheduler_db_connection_config: *databaseConnectionConfig
           policy_db_connection_config: *databaseConnectionConfig
           cf: &cf_credentials
@@ -346,11 +327,100 @@
               client_cert: ((metricscollector_client.certificate))
               client_key: ((metricscollector_client.private_key))
             require_consul: false
+#===============
+
+- type: replace
+  path: /instance_groups/name=database/jobs/name=postgres/properties/databases/databases/-
+  value: 
+    - citext: true
+      name: autoscaler_db
+      tag: autoscaler_db
+- type: replace
+  path: /instance_groups/name=database/jobs/name=postgres/properties/databases/roles/-
+  value: 
+    - name: autoscaler_db
+      password: ((autoscaler_database_password))
+      tag: autoscaler_db
+
+- type: replace
+  path: /instance_groups/name=apiserver/jobs/name=asapi/properties/autoscaler/policy_db
+  value: &external_database
+    databases:
+    - name: autoscaler_db
+      tag: autoscaler_db
+    address: sql-db.service.cf.internal
+    db_scheme: postgres
+    port: 5524
+    roles:
+    - name: postgres
+      password: ((autoscaler_database_password))
+      tag: autoscaler_db 
+    connection_config: &databaseConnectionConfig
+      max_open_connections: 100
+      max_idle_connections: 10
+      connection_max_lifetime: 60s
+
+- type: replace
+  path: /instance_groups/name=scheduler_autoscaler/jobs/name=asactors/properties/autoscaler/policy_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=scheduler_autoscaler/jobs/name=asactors/properties/autoscaler/scheduler_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=servicebroker/jobs/name=asapi/properties/autoscaler/binding_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=operator/jobs/name=asactors/properties/autoscaler/appmetrics_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=operator/jobs/name=asactors/properties/autoscaler/instancemetrics_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=operator/jobs/name=asactors/properties/autoscaler/scalingengine_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=metricscollector/jobs/name=asmetrics/properties/autoscaler/instancemetrics_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=metricscollector/jobs/name=asmetrics/properties/autoscaler/policy_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=eventgenerator/jobs/name=asmetrics/properties/autoscaler/appmetrics_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=eventgenerator/jobs/name=asmetrics/properties/autoscaler/policy_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=scalingengine/jobs/name=asactors/properties/autoscaler/scalingengine_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=scalingengine/jobs/name=asactors/properties/autoscaler/scheduler_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=scalingengine/jobs/name=asactors/properties/autoscaler/policy_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=operator/jobs/name=asactors/properties/autoscaler/lock_db
+  value: *external_database
+#===============
 #add app-autoscaler variables
 - type: replace
   path: /variables/-
   value:
-    name: database_password
+    name: autoscaler_database_password
     type: password
 - type: replace
   path: /variables/-
