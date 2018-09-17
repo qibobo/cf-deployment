@@ -339,7 +339,7 @@
       tag: autoscaler_db
 
 - type: replace
-  path: /instance_groups/name=apiserver/jobs/name=asapi/properties/autoscaler/policy_db
+  path: /instance_groups/name=asapi/jobs/name=asapi/properties/autoscaler/policy_db
   value: &external_database
     databases:
     - name: autoscaler_db
