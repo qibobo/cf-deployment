@@ -1,0 +1,686 @@
+#add app-autoscaler release
+- type: replace
+  path: /releases/-
+  value:
+    name: app-autoscaler
+    version: latest
+# - type: replace
+#   path: /releases/-
+#   value:
+#     name: postgres
+#     url: https://bosh.io/d/github.com/cloudfoundry/postgres-release?v=17
+#     version: '17'
+#     sha1: b062e32a5409ccd4e4161337c48705c793a58412
+    
+
+
+# asactors Instance Group: scalingengine&scheduler&operator
+- type: replace
+  path: /instance_groups/-
+  value:
+    name: asactors
+    azs:
+    - z1
+    instances: 1
+    networks:
+    - name: default
+    stemcell: default
+    vm_type: minimal
+    update:
+      max_in_flight: 1
+      serial: true
+    jobs:
+    - name: scalingengine
+      release: app-autoscaler
+      properties:
+        autoscaler:
+          scalingengine_db: &external_database
+            databases:
+            - name: autoscaler_db
+              tag: default
+            address: sql-db.service.cf.internal
+            db_scheme: postgres
+            port: 5524
+            roles:
+            - name: postgres
+              password: ((autoscaler_database_password))
+              tag: default 
+            connection_config: &databaseConnectionConfig
+              max_open_connections: 100
+              max_idle_connections: 10
+              connection_max_lifetime: 60s
+          scheduler_db: *external_database
+          policy_db: *external_database
+          scalingengine_db_connection_config: *databaseConnectionConfig
+          scheduler_db_connection_config: *databaseConnectionConfig
+          policy_db_connection_config: *databaseConnectionConfig
+          cf: &cf_credentials
+            api: "https://api.((system_domain))"
+            grant_type: password
+            username: admin
+            password: "((cf_admin_password))"
+            client_id: ""
+            secret: ""
+            skip_ssl_validation: "((skip_ssl_validation))"
+          scalingengine:
+            logging:
+              level: debug
+            server:
+              port: &scalingEnginePort 6104
+            health:
+              port: &scalingEngineHealthPort 6204
+              emit_interval: 15s  
+            defaultCoolDownSecs: 300
+            lockSize: 32
+            ca_cert: ((scalingengine_ca.ca))
+            server_cert: ((scalingengine_server.certificate))
+            server_key: ((scalingengine_server.private_key))
+            require_consul: false
+    - name: scheduler
+      release: app-autoscaler
+      properties:
+        autoscaler:
+          scheduler:
+            port: &schedulerPort 6102
+            job_reschedule_interval_millisecond: 10000
+            job_reschedule_maxcount: 6
+            notification_reschedule_maxcount: 3
+            ca_cert: ((scheduler_ca.ca))
+            server_cert: ((scheduler_server.certificate))
+            server_key: ((scheduler_server.private_key))
+            scaling_engine:
+              ca_cert: ((scalingengine_ca.ca))
+              client_cert: ((scalingengine_client.certificate))
+              client_key: ((scalingengine_client.private_key))
+            require_consul: false
+          scheduler_db: *external_database
+          policy_db: *external_database
+    - name: operator
+      release: app-autoscaler
+      properties:
+        autoscaler:
+          appmetrics_db: *external_database
+          instancemetrics_db: *external_database
+          scalingengine_db: *external_database
+          appmetrics_db_connection_config: *databaseConnectionConfig
+          instancemetrics_db_connection_config: *databaseConnectionConfig
+          scalingengine_db_connection_config: *databaseConnectionConfig
+          lock_db: *external_database
+          operator:
+            scaling_engine:
+              port: *scalingEnginePort
+              ca_cert: ((scalingengine_ca.ca))
+              client_cert: ((scalingengine_client.certificate))
+              client_key: ((scalingengine_client.private_key))                
+            scheduler:
+              port: *schedulerPort
+              ca_cert: ((scheduler_ca.ca))
+              client_cert: ((scheduler_client.certificate))
+              client_key: ((scheduler_client.private_key))        
+            db_lock: 
+              ttl: 15s
+              retry_interval: 5s
+            enable_db_lock: false
+            logging:
+              level: debug 
+            require_consul: false
+    # asapi Instance Group : apiserver&servicebroker
+- type: replace
+  path: /instance_groups/-
+  value:
+    name: asapi
+    azs:
+    - z1
+    instances: 1
+    networks:
+    - name: default
+    stemcell: default
+    vm_type: minimal
+    update:
+      max_in_flight: 1
+      serial: true
+    jobs:
+    - name: apiserver
+      release: app-autoscaler
+      properties:
+        autoscaler:
+          api_server:
+            service_offering_enabled: false
+            db_config: &db_config
+              idle_timeout: 1000
+              max_connections: 10
+              min_connections: 0
+            port: 6100
+            publicPort: &apiServerPublicPort 6106
+            ca_cert: ((apiserver_ca.ca))
+            server_cert: ((apiserver_server.certificate))
+            server_key:  ((apiserver_server.private_key))
+            scheduler:
+              ca_cert: ((scheduler_ca.ca))
+              client_cert: ((scheduler_client.certificate))
+              client_key: ((scheduler_client.private_key))
+            scaling_engine:
+              ca_cert: ((scalingengine_ca.ca))
+              client_cert: ((scalingengine_client.certificate))
+              client_key: ((scalingengine_client.private_key))
+            metrics_collector:
+              ca_cert: ((metricscollector_ca.ca))
+              client_cert: ((metricscollector_client.certificate))
+              client_key: ((metricscollector_client.private_key))
+            eventgenerator:
+              ca_cert: ((eventgenerator_ca.ca))
+              client_cert: ((eventgenerator_client.certificate))
+              client_key: ((eventgenerator_client.private_key))               
+            service_broker:
+              ca_cert: ((servicebroker_ca.ca))
+              client_cert: ((servicebroker_client.certificate))
+              client_key: ((servicebroker_client.private_key))
+            require_consul: false
+          policy_db: *external_database
+          cf:
+            api: "https://api.((system_domain))"
+            skip_ssl_validation: "((skip_ssl_validation))"
+    - name: servicebroker
+      release: app-autoscaler
+      properties:
+        autoscaler:
+          service_broker: 
+            db_config: *db_config
+            publicPort : &servicebrokerPort 6101
+            port: 6107
+            ca_cert: ((servicebroker_ca.ca))
+            server_cert: ((servicebroker_server.certificate))
+            server_key: ((servicebroker_server.private_key))
+            public_ca_cert: ((servicebroker_public_ca.ca))
+            public_server_cert: ((servicebroker_public_server.certificate))
+            public_server_key: ((servicebroker_public_server.private_key))
+            username: autoscaler_service_broker_user
+            password: ((autoscaler_service_broker_password))
+            http_request_timeout: 5000
+            dashboard_redirect_uri: ""
+            catalog: 
+              services:
+              - id: autoscaler-guid
+                name: autoscaler
+                description: Automatically increase or decrease the number of application instances based on a policy you define.
+                bindable: true
+                plans:
+                - id: autoscaler-free-plan-id
+                  name: autoscaler-free-plan
+                  description: This is the free service plan for the Auto-Scaling service.
+            api_server:
+              ca_cert: ((apiserver_ca.ca))
+              client_cert: ((apiserver_client.certificate))
+              client_key: ((apiserver_client.private_key))
+            require_consul: false
+          binding_db: *external_database
+    - name: route_registrar
+      release: routing
+      consumes:
+        nats: {from: nats, deployment: cf}
+      properties:
+        route_registrar:
+          routes:
+          - name: api_server_public_api
+            registration_interval: 20s
+            port: *apiServerPublicPort
+            tags:
+              component: api_server
+            uris:
+              - autoscaler.((system_domain))
+          - name: autoscaler_service_broker
+            registration_interval: 20s
+            port: *servicebrokerPort
+            tags:
+              component: autoscaler_service_broker
+            uris:
+              - autoscalerservicebroker.((system_domain))
+    # asmetrics Instance Group: metricscollector&eventgenerator
+- type: replace
+  path: /instance_groups/-
+  value:
+    name: asmetrics
+    azs:
+    - z1
+    instances: 1
+    networks:
+    - name: default
+    stemcell: default
+    vm_type: small
+    update:
+      max_in_flight: 1
+      serial: true
+    jobs:
+    - name: metricscollector
+      release: app-autoscaler
+      properties:
+        autoscaler:
+          instancemetrics_db: *external_database
+          policy_db: *external_database
+          instancemetrics_db_connection_config: *databaseConnectionConfig
+          policy_db_connection_config: *databaseConnectionConfig
+          cf: *cf_credentials
+          metricscollector:
+            logging:
+              level: debug
+            server:
+              port: &metricsCollectorPort 6103
+            collector:
+              refresh_interval: 60s
+              collect_interval: 30s
+              save_interval: 5s
+            ca_cert: ((metricscollector_ca.ca))
+            server_cert: ((metricscollector_server.certificate))
+            server_key: ((metricscollector_server.private_key))
+            require_consul: false
+    - name: eventgenerator
+      release: app-autoscaler
+      properties:
+        autoscaler:
+          appmetrics_db: *external_database
+          policy_db: *external_database
+          appmetrics_db_connection_config: *databaseConnectionConfig
+          policy_db_connection_config: *databaseConnectionConfig
+          eventgenerator:
+            logging:
+              level: debug
+            server:
+              port: &eventGeneratorPort 6105
+            ca_cert: ((eventgenerator_ca.ca))
+            server_cert: ((eventgenerator_server.certificate))
+            server_key: ((eventgenerator_server.private_key))
+            aggregator:
+              aggregator_execute_interval: 40s
+              policy_poller_interval: 40s
+              metric_poller_count: 20
+              app_monitor_channel_size: 200
+              save_interval: 5s
+              app_metric_channel_size: 1000
+            evaluator:
+              evaluation_manager_execute_interval: 40s
+              evaluator_count: 20
+              trigger_array_channel_size: 200
+            defaultStatWindowSecs: 300
+            defaultBreachDurationSecs: 300
+            circuitBreaker:
+              back_off_initial_interval: 5m
+              back_off_max_interval: 120m
+              consecutive_failure_count: 5
+            scaling_engine:
+              host: scalingengine.service.cf.internal
+              port: *scalingEnginePort
+              ca_cert: ((scalingengine_ca.ca))
+              client_cert: ((scalingengine_client.certificate))
+              client_key: ((scalingengine_client.private_key))
+            metricscollector:
+              host: metricscollector.service.cf.internal
+              port: *metricsCollectorPort
+              ca_cert: ((metricscollector_ca.ca))
+              client_cert: ((metricscollector_client.certificate))
+              client_key: ((metricscollector_client.private_key))
+            require_consul: false
+
+# create autoscaler relevant database and role
+- type: replace
+  path: /instance_groups/name=database/jobs/name=postgres/properties/databases/databases/-
+  value: 
+    citext: true
+    name: autoscaler_db
+    tag: default
+- type: replace
+  path: /instance_groups/name=database/jobs/name=postgres/properties/databases/roles/-
+  value: 
+    name: postgres
+    password: ((autoscaler_database_password))
+    tag: default
+# change db
+- type: replace
+  path: /instance_groups/name=asactors/jobs/name=scheduler/properties/autoscaler/policy_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=asactors/jobs/name=scheduler/properties/autoscaler/scheduler_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=asapi/jobs/name=servicebroker/properties/autoscaler/binding_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=asactors/jobs/name=operator/properties/autoscaler/appmetrics_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=asactors/jobs/name=operator/properties/autoscaler/instancemetrics_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=asactors/jobs/name=operator/properties/autoscaler/scalingengine_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=asmetrics/jobs/name=metricscollector/properties/autoscaler/instancemetrics_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=asmetrics/jobs/name=metricscollector/properties/autoscaler/policy_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=asmetrics/jobs/name=eventgenerator/properties/autoscaler/appmetrics_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=asmetrics/jobs/name=eventgenerator/properties/autoscaler/policy_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=asactors/jobs/name=scalingengine/properties/autoscaler/scalingengine_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=asactors/jobs/name=scalingengine/properties/autoscaler/scheduler_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=asactors/jobs/name=scalingengine/properties/autoscaler/policy_db
+  value: *external_database
+
+- type: replace
+  path: /instance_groups/name=asactors/jobs/name=operator/properties/autoscaler/lock_db
+  value: *external_database
+#===============
+#add app-autoscaler variables
+- type: replace
+  path: /variables/-
+  value:
+    name: autoscaler_database_password
+    type: password
+- type: replace
+  path: /variables/-
+  value:
+    name: autoscaler_service_broker_password
+    type: password
+- type: replace
+  path: /variables/-
+  value:
+    name: scalingengine_ca
+    type: certificate
+    options:
+      is_ca: true
+      common_name: scalingengineCA
+- type: replace
+  path: /variables/-
+  value:
+    name: scalingengine_server
+    type: certificate
+    options:
+      ca: scalingengine_ca
+      common_name: scalingengine.service.cf.internal
+      extended_key_usage:
+      - client_auth
+      - server_auth
+- type: replace
+  path: /variables/-
+  value:
+    name: scalingengine_client
+    type: certificate
+    options:
+      ca: scalingengine_ca
+      common_name: scalingengine client
+      extended_key_usage:
+      - client_auth
+- type: replace
+  path: /variables/-
+  value:
+    name: metricscollector_ca
+    type: certificate
+    options:
+      is_ca: true
+      common_name: metricscollectorCA
+- type: replace
+  path: /variables/-
+  value:
+    name: metricscollector_server
+    type: certificate
+    options:
+      ca: metricscollector_ca
+      common_name: metricscollector.service.cf.internal
+      extended_key_usage:
+      - client_auth
+      - server_auth
+- type: replace
+  path: /variables/-
+  value:
+    name: metricscollector_client
+    type: certificate
+    options:
+      ca: metricscollector_ca
+      common_name: metricscollector client
+      extended_key_usage:
+      - client_auth
+- type: replace
+  path: /variables/-
+  value:
+    name: eventgenerator_ca
+    type: certificate
+    options:
+      is_ca: true
+      common_name: eventgeneratorCA
+- type: replace
+  path: /variables/-
+  value:
+    name: eventgenerator_server
+    type: certificate
+    options:
+      ca: eventgenerator_ca
+      common_name: eventgenerator.service.cf.internal
+      extended_key_usage:
+      - client_auth
+      - server_auth
+- type: replace
+  path: /variables/-
+  value:
+    name: eventgenerator_client
+    type: certificate
+    options:
+      ca: eventgenerator_ca
+      common_name: eventgenerator client
+      extended_key_usage:
+      - client_auth   
+- type: replace
+  path: /variables/-
+  value:   
+    name: apiserver_ca
+    type: certificate
+    options:
+      is_ca: true
+      common_name: apiserverCA
+- type: replace
+  path: /variables/-
+  value:
+    name: apiserver_server
+    type: certificate
+    options:
+      ca: apiserver_ca
+      common_name: apiserver.service.cf.internal
+      extended_key_usage:
+      - client_auth
+      - server_auth
+- type: replace
+  path: /variables/-
+  value:
+    name: apiserver_public_ca
+    type: certificate
+    options:
+      is_ca: true
+      common_name: apiserverpublicCA
+- type: replace
+  path: /variables/-
+  value:
+    name: apiserver_public_server
+    type: certificate
+    options:
+      ca: apiserver_public_ca
+      common_name: autoscaler.((system_domain))
+      extended_key_usage:
+      - client_auth
+      - server_auth
+- type: replace
+  path: /variables/-
+  value:
+    name: apiserver_client
+    type: certificate
+    options:
+      ca: apiserver_ca
+      common_name: apiserver client
+      extended_key_usage:
+      - client_auth
+- type: replace
+  path: /variables/-
+  value:
+    name: servicebroker_ca
+    type: certificate
+    options:
+      is_ca: true
+      common_name: servicebrokerCA
+- type: replace
+  path: /variables/-
+  value:
+    name: servicebroker_server
+    type: certificate
+    options:
+      ca: servicebroker_ca
+      common_name: servicebroker.service.cf.internal
+      extended_key_usage:
+      - client_auth
+      - server_auth
+- type: replace
+  path: /variables/-
+  value:
+    name: servicebroker_client
+    type: certificate
+    options:
+      ca: servicebroker_ca
+      common_name: servicebroker client
+      extended_key_usage:
+      - client_auth
+- type: replace
+  path: /variables/-
+  value:
+    name: servicebroker_public_ca
+    type: certificate
+    options:
+      is_ca: true
+      common_name: servicebrokerCA
+- type: replace
+  path: /variables/-
+  value:
+    name: servicebroker_public_server
+    type: certificate
+    options:
+      ca: servicebroker_public_ca
+      common_name: autoscalerservicebroker.((system_domain))
+      extended_key_usage:
+      - client_auth
+      - server_auth
+- type: replace
+  path: /variables/-
+  value:
+    name: scheduler_ca
+    type: certificate
+    options:
+      is_ca: true
+      common_name: schedulerCA
+- type: replace
+  path: /variables/-
+  value:
+    name: scheduler_server
+    type: certificate
+    options:
+      ca: scheduler_ca
+      common_name: autoscalerscheduler.service.cf.internal
+      extended_key_usage:
+      - client_auth
+      - server_auth
+- type: replace
+  path: /variables/-
+  value:
+    name: scheduler_client
+    type: certificate
+    options:
+      ca: scheduler_ca
+      common_name: scheduler client
+      extended_key_usage:
+      - client_auth
+# add bosh-dns alias
+- type: replace
+  path: /addons/name=bosh-dns-aliases/jobs/name=bosh-dns-aliases/properties/aliases/-
+  value: 
+    domain: postgres.service.cf.internal
+    targets:
+    - query: '*'
+      instance_group: postgres_autoscaler
+      deployment: cf
+      network: default
+      domain: bosh
+- type: replace
+  path: /addons/name=bosh-dns-aliases/jobs/name=bosh-dns-aliases/properties/aliases/-
+  value: 
+    domain: apiserver.service.cf.internal
+    targets:
+    - query: '*'
+      instance_group: asapi
+      deployment: cf
+      network: default
+      domain: bosh
+- type: replace
+  path: /addons/name=bosh-dns-aliases/jobs/name=bosh-dns-aliases/properties/aliases/-
+  value:
+    domain: autoscalerscheduler.service.cf.internal
+    targets:
+    - query: '*'
+      instance_group: asactors
+      deployment: cf
+      network: default
+      domain: bosh
+- type: replace
+  path: /addons/name=bosh-dns-aliases/jobs/name=bosh-dns-aliases/properties/aliases/-
+  value:
+    domain: servicebroker.service.cf.internal
+    targets:
+    - query: '*'
+      instance_group: asapi
+      deployment: cf
+      network: default
+      domain: bosh
+- type: replace
+  path: /addons/name=bosh-dns-aliases/jobs/name=bosh-dns-aliases/properties/aliases/-
+  value:
+    domain: metricscollector.service.cf.internal
+    targets:
+    - query: '*'
+      instance_group: asmetrics
+      deployment: cf
+      network: default
+      domain: bosh
+- type: replace
+  path: /addons/name=bosh-dns-aliases/jobs/name=bosh-dns-aliases/properties/aliases/-
+  value:
+    domain: eventgenerator.service.cf.internal
+    targets:
+    - query: '*'
+      instance_group: asmetrics
+      deployment: cf
+      network: default
+      domain: bosh
+- type: replace
+  path: /addons/name=bosh-dns-aliases/jobs/name=bosh-dns-aliases/properties/aliases/-
+  value:
+    domain: scalingengine.service.cf.internal
+    targets:
+    - query: '*'
+      instance_group: asactors
+      deployment: cf
+      network: default
+      domain: bosh
