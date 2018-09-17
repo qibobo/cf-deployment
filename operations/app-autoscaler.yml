@@ -339,7 +339,7 @@
       tag: autoscaler_db
 
 - type: replace
-  path: /instance_groups/name=asapi/jobs/name=asapi/properties/autoscaler/policy_db
+  path: /instance_groups/name=asapi/jobs/name=apiserver/properties/autoscaler/policy_db
   value: &external_database
     databases:
     - name: autoscaler_db
@@ -357,59 +357,59 @@
       connection_max_lifetime: 60s
 
 - type: replace
-  path: /instance_groups/name=scheduler_autoscaler/jobs/name=asactors/properties/autoscaler/policy_db
+  path: /instance_groups/name=asactors/jobs/name=scheduler/properties/autoscaler/policy_db
   value: *external_database
 
 - type: replace
-  path: /instance_groups/name=scheduler_autoscaler/jobs/name=asactors/properties/autoscaler/scheduler_db
+  path: /instance_groups/name=asactors/jobs/name=scheduler/properties/autoscaler/scheduler_db
   value: *external_database
 
 - type: replace
-  path: /instance_groups/name=servicebroker/jobs/name=asapi/properties/autoscaler/binding_db
+  path: /instance_groups/name=asapi/jobs/name=servicebroker/properties/autoscaler/binding_db
   value: *external_database
 
 - type: replace
-  path: /instance_groups/name=operator/jobs/name=asactors/properties/autoscaler/appmetrics_db
+  path: /instance_groups/name=asactors/jobs/name=operator/properties/autoscaler/appmetrics_db
   value: *external_database
 
 - type: replace
-  path: /instance_groups/name=operator/jobs/name=asactors/properties/autoscaler/instancemetrics_db
+  path: /instance_groups/name=asactors/jobs/name=operator/properties/autoscaler/instancemetrics_db
   value: *external_database
 
 - type: replace
-  path: /instance_groups/name=operator/jobs/name=asactors/properties/autoscaler/scalingengine_db
+  path: /instance_groups/name=asactors/jobs/name=operator/properties/autoscaler/scalingengine_db
   value: *external_database
 
 - type: replace
-  path: /instance_groups/name=metricscollector/jobs/name=asmetrics/properties/autoscaler/instancemetrics_db
+  path: /instance_groups/name=asmetrics/jobs/name=metricscollector/properties/autoscaler/instancemetrics_db
   value: *external_database
 
 - type: replace
-  path: /instance_groups/name=metricscollector/jobs/name=asmetrics/properties/autoscaler/policy_db
+  path: /instance_groups/name=asmetrics/jobs/name=metricscollector/properties/autoscaler/policy_db
   value: *external_database
 
 - type: replace
-  path: /instance_groups/name=eventgenerator/jobs/name=asmetrics/properties/autoscaler/appmetrics_db
+  path: /instance_groups/name=asmetrics/jobs/name=eventgenerator/properties/autoscaler/appmetrics_db
   value: *external_database
 
 - type: replace
-  path: /instance_groups/name=eventgenerator/jobs/name=asmetrics/properties/autoscaler/policy_db
+  path: /instance_groups/name=asmetrics/jobs/name=eventgenerator/properties/autoscaler/policy_db
   value: *external_database
 
 - type: replace
-  path: /instance_groups/name=scalingengine/jobs/name=asactors/properties/autoscaler/scalingengine_db
+  path: /instance_groups/name=asactors/jobs/name=scalingengine/properties/autoscaler/scalingengine_db
   value: *external_database
 
 - type: replace
-  path: /instance_groups/name=scalingengine/jobs/name=asactors/properties/autoscaler/scheduler_db
+  path: /instance_groups/name=asactors/jobs/name=scalingengine/properties/autoscaler/scheduler_db
   value: *external_database
 
 - type: replace
-  path: /instance_groups/name=scalingengine/jobs/name=asactors/properties/autoscaler/policy_db
+  path: /instance_groups/name=asactors/jobs/name=scalingengine/properties/autoscaler/policy_db
   value: *external_database
 
 - type: replace
-  path: /instance_groups/name=operator/jobs/name=asactors/properties/autoscaler/lock_db
+  path: /instance_groups/name=asactors/jobs/name=operator/properties/autoscaler/lock_db
   value: *external_database
 #===============
 #add app-autoscaler variables
