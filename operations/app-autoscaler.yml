@@ -56,7 +56,21 @@
       release: app-autoscaler
       properties:
         autoscaler:
-          scalingengine_db: *external_database
+          scalingengine_db: &external_database
+            databases:
+            - name: autoscaler_db
+              tag: default
+            address: sql-db.service.cf.internal
+            db_scheme: postgres
+            port: 5524
+            roles:
+            - name: postgres
+              password: ((autoscaler_database_password))
+              tag: default 
+            connection_config: &databaseConnectionConfig
+              max_open_connections: 100
+              max_idle_connections: 10
+              connection_max_lifetime: 60s
           scheduler_db: *external_database
           policy_db: *external_database
           scalingengine_db_connection_config: *databaseConnectionConfig
@@ -153,7 +167,7 @@
       properties:
         autoscaler:
           api_server:
-            service_offering_enabled: true
+            service_offering_enabled: false
             db_config: &db_config
               idle_timeout: 1000
               max_connections: 10
@@ -342,23 +356,23 @@
     password: ((autoscaler_database_password))
     tag: default
 
-- type: replace
-  path: /instance_groups/name=asapi/jobs/name=apiserver/properties/autoscaler/policy_db
-  value: &external_database
-    databases:
-    - name: autoscaler_db
-      tag: default
-    address: sql-db.service.cf.internal
-    db_scheme: postgres
-    port: 5524
-    roles:
-    - name: postgres
-      password: ((autoscaler_database_password))
-      tag: default 
-    connection_config: &databaseConnectionConfig
-      max_open_connections: 100
-      max_idle_connections: 10
-      connection_max_lifetime: 60s
+# - type: replace
+#   path: /instance_groups/name=asapi/jobs/name=apiserver/properties/autoscaler/policy_db
+#   value: &external_database
+#     databases:
+#     - name: autoscaler_db
+#       tag: default
+#     address: sql-db.service.cf.internal
+#     db_scheme: postgres
+#     port: 5524
+#     roles:
+#     - name: postgres
+#       password: ((autoscaler_database_password))
+#       tag: default 
+#     connection_config: &databaseConnectionConfig
+#       max_open_connections: 100
+#       max_idle_connections: 10
+#       connection_max_lifetime: 60s
 
 - type: replace
   path: /instance_groups/name=asactors/jobs/name=scheduler/properties/autoscaler/policy_db
