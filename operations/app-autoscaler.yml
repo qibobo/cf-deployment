@@ -55,11 +55,7 @@
           scalingengine_db: *autoscaler_database
           scheduler_db: *autoscaler_database
           policy_db: *autoscaler_database
-          # scalingengine_db_connection_config: *databaseConnectionConfig
           scalingengine_db_connection_config: *databaseConnectionConfig
-            max_open_connections: 100
-            max_idle_connections: 10
-            connection_max_lifetime: 60s
           scheduler_db_connection_config: *databaseConnectionConfig
           policy_db_connection_config: *databaseConnectionConfig
           cf: &cf_credentials
